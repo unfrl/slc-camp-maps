@@ -6,9 +6,9 @@ library(plotly)
 library(raster)
 library(rjson)
 library(lubridate)
+library(RColorBrewer)
 library(viridis)
 library(colorspace)
-
 
 
 #### Read in SHP, convert to MULTISTRING, extract geometry ####
@@ -29,17 +29,6 @@ for (i in x){
   
 }
 
-#### Read in geoJSON data into lists ####
-
-temp <- list.files(path = "JSON/", pattern = "*.geojson")          #list of all geoJSON files
-
-json <- list()                                                    #empy list to fill
-
-for (i in x){
-  thing <- fromJSON(file = paste0("JSON/",temp[[i]]))             #reads in each geoJSON file from temp list
-  json[[i]] <- thing                                             #adds data to geo list
-}
-
 #### Read in CSV for Dates ####
 temp = list.files(path = "CSV/",pattern="*.csv")                  #list of all CSV files
 
@@ -49,6 +38,7 @@ alldatelabs <- list()
 
 for (i in x){
   thing <- read.csv(file = paste0("CSV/",temp[[i]]), stringsAsFactors = F)              #reads in each CSV from temp list
+  
   csv[[i]] <- thing                                           #adds data to dates list
 }
 
@@ -63,6 +53,11 @@ for (i in x){
   alldates[[i]] <- csv[[i]]$Date[1]
 }
 
+for (i in x){
+  
+  csv[[i]]$geometry <- csv[[i]]$geometry
+  
+}
 
 encampments <- c()                                                #empty list to fill
 
@@ -121,26 +116,28 @@ colnames(encampments.df) <- alldatelabs                                #name col
 encampments.df <- t(encampments.df)                              #transpose df, turns it into a matrix
 encampments.df <- as.data.frame(encampments.df)                  #convert back to final df
 
-large.tent <- max(encampments.df, na.rm = T)                     #defines largest tent count
-pal2 <- magma(large.tent)                                        #creates color palette in magma from 1-largest tent count
+pal <- rainbow(length(encampments))
+large.tent <- max(encampments.df, na.rm = T)
+pal2 <- magma(large.tent)
 
-encampments.df.total <- cbind(encampments.df, "Total Tents" = rowSums(encampments.df, na.rm = T))               #add total tents count summed row
-encampments.df.dates <- cbind(encampments.df, "Dates" = as.data.frame(alldates))            #adds dates column
-encampments.df.total.dates <- cbind(encampments.df.total, "Dates" = as.data.frame(alldates))  #both dates and total tents added
+encampments.df <- cbind(encampments.df, "Total Tents" = rowSums(encampments.df, na.rm = T)) #add total tents count summed row
+
+encampments.df.dates <- cbind(encampments.df, "Dates" = as.data.frame(alldates))
 
 #### Loop to create Geo Ref Dataframe #### 
 
-encampments.df.geo <- encampments.df                      #new DF to hold geometries
+encampments.df.geo <- encampments.df.dates
+encampments.df.geo <- encampments.df.geo[,-(ncol(encampments.df.dates)-1)]
 
-for ( i in seq(1, nrow(encampments.df.geo),1)){                 #loop through each date
+for ( i in seq(1, nrow(encampments.df.geo),1)){
   
-  for ( j in seq(1, (ncol(encampments.df.geo)),1)){               #loop through each camp in the date
+  for ( j in seq(1, (ncol(encampments.df)-1),1)){
     
-    if (is.na(encampments.df.geo[alldatelabs[[i]],encampments[[j]]])){  #if the cell in the DF is NA keep it so
+    if (is.na(encampments.df[alldatelabs[[i]],encampments[[j]]])){
       
     } else {
       
-      encampments.df.geo[i,j] <- paste0("shapes[[",i,"]]$geometry[[",match(encampments[[j]], csv[[i]]$Camp),"]][[1]]") #fill occupied cells with geometry
+      encampments.df.geo[i,j] <- paste0("shapes[[",i,"]]$geometry[[",match(encampments[[j]], csv[[i]]$Camp),"]][[1]]")
       
     }
     
@@ -150,27 +147,30 @@ for ( i in seq(1, nrow(encampments.df.geo),1)){                 #loop through ea
 
 #### Dates 3D Map ####
 
-dates.3D <- plot_ly(height = 700)                                          #new plotly object
+dates.3D <- plot_ly(height = 700)
 
-for ( i in seq(1, nrow(encampments.df.geo),1)){                            #loop through each date 
+for ( i in seq(1, nrow(encampments.df.geo),1)){
   
-  for (j in seq(1, (ncol(encampments.df.geo)),1)){                         #loop through each camp in each date
+  for (j in seq(1, (ncol(encampments.df.geo)-1),1)){
     
-    camp <- as.data.frame(eval(parse(text = encampments.df.geo[i,j])))     #place camp/date geometry into a DF object
+    first.camp <- which(!is.na(encampments.df.geo[,j])) %>%
+      min(.)
     
-    group <- paste(encampments[[j]])                                       #name of camp
+    camp <- as.data.frame(eval(parse(text = encampments.df.geo[i,j])))
     
-    camp.name <- c(paste0("Camp: ", encampments[[j]], "<br>"))             #hover text name
-    date <- c(paste0("Date: ", alldatelabs[[i]], "<br>"))                 #hover text date 
-    tents <- c(paste0("Tents: ", encampments.df[i,j]))                    #hover text tent count
-    hover <- c(paste0(camp.name, date, tents))                            #concatonate hover text 
+    group <- paste(encampments[[j]])
     
-    if (!is.na(encampments.df[i,j])){                                     #for every filled cell
+    camp.name <- c(paste0("Camp: ", encampments[[j]], "<br>"))  
+    date <- c(paste0("Date: ", alldatelabs[[i]], "<br>"))                    
+    tents <- c(paste0("Tents: ", encampments.df[i,j]))   
+    hover <- c(paste0(camp.name, date, tents))
+    
+    if (!is.na(encampments.df[i,j])){
       
-      colors <- as.data.frame(rep(encampments.df[i,j], nrow(camp)))       #create color from tent count
-      camp <- cbind(camp,colors)                                          #place color for each geometry of camp
+      colors <- as.data.frame(rep(encampments.df[i,j], nrow(camp)))
+      camp <- cbind(camp,colors)
       
-      dates.3D <- dates.3D %>%add_trace(date, x = camp$V1,                
+      dates.3D <- dates.3D %>%add_trace(date, x = camp$V1, 
                                 y = camp$V2, 
                                 z = alldates[[i]],                         
                                 type = 'scatter3d',
@@ -182,39 +182,117 @@ for ( i in seq(1, nrow(encampments.df.geo),1)){                            #loop
                                             cmax = large.tent,
                                             colorscale = 'Electric',
                                             coloraxis = 'coloraxis'),     
-                                showlegend = F,                            #do not show legend (for camp group)
-                                visible = T,                               #make visible
-                                hovertext = hover,                        #sets hover text to created array
+                                showlegend = F,                      #show legend (for camp group)
+                                visible = T,                         #make visible
+                                hovertext = hover,                  #sets hover text to created array
                                 hoverinfo = "text",
-                                opacity = .8,                              #80% opacity
-                                name = paste0(group),                     #names the encampment
-                                legendgroup = group)                      #sets legend group
+                                opacity = .8,                       #80% opacity
+                                name = paste0(group),                           #names it the encampment
+                                legendgroup = group)
       
-    } 
+    } else {
+      
+      dates.3D <- dates.3D %>%add_trace(date, x = camp$V1, 
+                                y = camp$V2, 
+                                z = alldates[[i]],                         
+                                type = 'scatter3d',
+                                mode = 'lines', 
+                                scene = 'scene2',
+                                line = list(width = 7,
+                                            color = "#0000FF00"),     
+                                showlegend = F,                      #show legend (for camp group)
+                                visible = T,                         #make visible
+                                hovertext = hover,                  #sets hover text to created array
+                                hoverinfo = "text",
+                                opacity = .8,                       #80% opacity
+                                name = paste0(group),                           #names it the encampment
+                                legendgroup = group)
+      
+    }
+    
+    
+    
+    
+    
   }
 }
 
+steps <- list()
+rep <- rep(FALSE, nrow(encampments.df.geo) * (ncol(encampments.df.geo)-1))
+final.end <- length(rep)
+last.camp <- 1
+camp.list <- list()
+camp.leg <- list()
+camp.leg2 <- list()
+new.leg <- list()
 
-steps <- list()                                       #empty steps list
-rep <- rep(FALSE, sum(!is.na(encampments.df.geo)))    #FALSE repeated for each trace
 
-for ( i in seq(1, nrow(encampments.df.geo),1)){                         #for each date
-                                                           #if its the first date
+
+
+for ( i in seq(1, nrow(encampments.df.geo),1)){
+  
+  if (i == 1){
     
-  step <- list(args = list(list(visible = rep)),                        #turn all to visible = F
+  step <- list(args = list(list(visible = rep), list(showlegend = F)), 
                method = 'update', 
-               label = print(alldatelabs[[i]]))                         #label step by date   
+               label = print(alldatelabs[[i]]))      #labels each map with its associated date
   
-  camp.leg <- sum(!is.na(encampments.df.geo[0:i,]))                     #number of camps on this date
+  camp.leg[[i]] <- which(!is.na(encampments.df.geo[i,]))
   
-  step$args[[1]]$visible[0:camp.leg] <- TRUE                            #turn on traces for camps through this date
+  step$args[[1]]$showlegend[1 : final.end] = FALSE
   
-  steps[[i]] = step                                                     #add to steps
+  for (l in camp.leg[[i]]){
+    
+    step$args[[1]]$showlegend[camp.leg[[i]][l]] <- F
+    step$args[[2]]$showlegend[camp.leg[[i]][l]] <- F
+    
+  }
+  
+  } else {
+    
+    step <- list(args = step$args, 
+                 method = 'update', 
+                 label = print(alldatelabs[[i]]))      #labels each map with its associated date
+    
+    camp.leg2[[i]] <- which(!is.na(encampments.df.geo[i,]))
+    new.camps <- setdiff(camp.leg2[[i]], camp.leg[[i-1]])
+    camp.leg[[i]] <- append(camp.leg[[i-1]], new.camps)
+    
+    for (k in new.camps){
+      
+      camp.leg[[i]][k] <- ((i-1) * (ncol(encampments.df.geo)-1)) + k
+
+    }
+    
+    step$args[[1]]$showlegend[1 : final.end] = FALSE
+    
+    for (p in camp.leg[[i]]){
+      
+      step$args[[1]]$showlegend[p] <- F
+      step$args[[2]]$showlegend[p] <- F
+      
+    }
+    
+  }
+  
+  camp.list[[i]] <- which(!is.na(encampments.df.geo[i,])) 
+  
+  for (j in camp.list[[i]]){
+    
+    camp.list[[i]][j] <- ((i-1) * (ncol(encampments.df.geo)-1)) + j
+    
+    step$args[[1]]$visible[camp.list[[i]][j]] <- TRUE
+    
+  }
+   
+  
+  
+  steps[[i]] = step
   
 }
 
 xrange <- list(-12461000, -12453000)
-yrange <- list(4974000, 4982000)
+yrange <- list(4974000, 4979000)
 zrange <- list(0, length(alldates))
 
 dates.3D <- dates.3D %>% layout(
@@ -327,32 +405,56 @@ dates.3D
 
 #### Camps 3D Map ####
 
-camps.3D <- plot_ly(height = 700)                                                   #new plotly object
+camps.3D <- plot_ly(height = 700)
 
-for ( i in seq(1, nrow(encampments.df.geo),1)){                                     #loop through each date
-   
-  for (j in seq(1, (ncol(encampments.df.geo)),1)){                                  #loop through each camp in each date
+for ( i in seq(1, nrow(encampments.df.geo),1)){
+  
+  for (j in seq(1, (ncol(encampments.df.geo)-1),1)){
     
-    first.camp <- which(!is.na(encampments.df.geo[,j])) %>%                         #find first date of this camp
+    first.camp <- which(!is.na(encampments.df.geo[,j])) %>%
       min(.)
     
-    group <- paste(encampments[[j]])                                                #name camp
+    group <- paste(encampments[[j]])
     
-    camp.name <- c(paste0("Camp: ", encampments[[j]], "<br>"))                       #hover text name
-    date <- c(paste0("Date: ", alldatelabs[[i]], "<br>"))                            #hover text date                 
-    tents <- c(paste0("Tents: ", encampments.df[i,j]))                               #hover text tent count
-    hover <- c(paste0(camp.name, date, tents))                                      #concatonate hover text
+    camp.name <- c(paste0("Camp: ", encampments[[j]], "<br>"))  
+    date <- c(paste0("Date: ", alldatelabs[[i]], "<br>"))                    
+    tents <- c(paste0("Tents: ", encampments.df[i,j]))   
+    hover <- c(paste0(camp.name, date, tents))
     
-    if (!is.na(encampments.df.geo[i,j])){                                           #only trace for full cells
+    if (is.na(encampments.df.geo[i,j])){
       
-    if ( i == first.camp ){                                                         #if this is the first time tracing camp                        
+      camp <- as.data.frame(eval(parse(text = encampments.df.geo[first.camp,j])))
+      colors <- as.data.frame(rep(encampments.df[i,j], nrow(camp)))
+      camp <- cbind(camp,colors)
       
-      camp <- as.data.frame(eval(parse(text = encampments.df.geo[i,j])))            #DF of geometry
-      colors <- as.data.frame(rep(encampments.df[i,j], nrow(camp)))                 #add tent count as new column
-      camp <- cbind(camp,colors)                                                    #bind to DF
+      camps.3D <- camps.3D %>%add_trace(date, x = camp$V1, 
+                              y = camp$V2, 
+                              z = alldatelabs[[i]],                         
+                              type = 'scatter3d',
+                              mode = 'lines', 
+                              scene = 'scene1',
+                              line = list(width = 7,
+                                          color = camp[,4],
+                                          cmin = 2,
+                                          cmax = large.tent,
+                                          colorscale = 'Electric',
+                                          coloraxis = 'coloraxis'),              
+                              showlegend = F,                      #show legend (for camp group)
+                              visible = F,                         #make visible
+                              hovertext = hover,                  #sets hover text to created array
+                              hoverinfo = "text",
+                              opacity = .8,                       #80% opacity
+                              name = paste0(encampments[[j]]),                           #names it the encampment
+                              legendgroup = group)
+      
+    } else if ( i == first.camp ){
+      
+      camp <- as.data.frame(eval(parse(text = encampments.df.geo[i,j])))
+      colors <- as.data.frame(rep(encampments.df[i,j], nrow(camp)))
+      camp <- cbind(camp,colors)
       
       
-      camps.3D <- camps.3D %>%add_trace(x = camp$V1, 
+      camps.3D <- camps.3D %>%add_trace(date, x = camp$V1, 
                               y = camp$V2, 
                               z = alldatelabs[[i]],                         
                               type = 'scatter3d',
@@ -378,7 +480,7 @@ for ( i in seq(1, nrow(encampments.df.geo),1)){                                 
       colors <- as.data.frame(rep(encampments.df[i,j], nrow(camp)))
       camp <- cbind(camp,colors)
       
-      camps.3D <- camps.3D %>%add_trace(x = camp$V1, 
+      camps.3D <- camps.3D %>%add_trace(date, x = camp$V1, 
                               y = camp$V2, 
                               z = alldatelabs[[i]],                         
                               type = 'scatter3d',
@@ -397,10 +499,57 @@ for ( i in seq(1, nrow(encampments.df.geo),1)){                                 
                               opacity = .8,                       #80% opacity
                               name = paste0(encampments[[j]]),                           #names it the encampment
                               legendgroup = group)
-    }
+      
     }
     
   }
+  
+}
+
+buttons <- list()
+
+for ( i in seq(1, (ncol(encampments.df.geo)-1),1)){
+  button <- list(args = list('visible', rep(FALSE, nrow(encampments.df.geo) * (ncol(encampments.df.geo)-1))),  #creates a list for step values set to FALSE for each map
+                 method = 'restyle', 
+                 label = print(encampments[[i]]))      #labels each map with its associated date
+  
+  last.camp <- which(!is.na(encampments.df.geo[,i])) %>%
+    max(.)
+  
+  onlist <- list()
+  
+  for ( j in seq(1, last.camp, 1)) {
+    
+    if (is.na(encampments.df.geo[j,i])){
+      
+      on <- NA
+      
+    } else {
+      
+      on <- i + ((ncol(encampments.df.geo)-1) * (j - 1))
+      
+    }
+    
+    onlist[[j]] <- on
+    
+  }
+  
+  for ( k in seq(1, last.camp, 1)){
+    
+    if (is.na(onlist[[k]])){
+      
+      button$args[[2]][onlist[[k]]] = FALSE
+      
+    } else {
+      
+      button$args[[2]][onlist[[k]]] = TRUE
+      
+    }
+    
+    
+  }
+  
+  buttons[[i]] = button
   
 }
 
@@ -475,6 +624,8 @@ camps.3D <- camps.3D %>% layout(
     )),
   paper_bgcolor = 'rgb(250,250,250)')
 
+camps.3D <- camps.3D %>% toWebGL()
+
 camps.3D
 
 #### Camp Plot ####
@@ -483,13 +634,13 @@ abatements <- read.csv("Abatements.csv", stringsAsFactors = F)
 
 plot.camps <- plot_ly(height = 700)                                                           #empty plot to fil
 
-for (i in seq(1, ncol(encampments.df.total),1)){
+for (i in seq(1, ncol(encampments.df),1)){
   
-  if ( i == ncol(encampments.df.total)){                                           #if last column (ie Total Tents)
+  if ( i == ncol(encampments.df)){                                           #if last column (ie Total Tents)
     
-    plot.camps <- plot.camps %>% add_trace(encampments.df.total,                                  
+    plot.camps <- plot.camps %>% add_trace(encampments.df,                                  
                                            x = as.Date(encampments.df.dates[,ncol(encampments.df.dates)], format = "%m/%d/%Y"),
-                                           y = encampments.df.total[,i], 
+                                           y = encampments.df[,i], 
                                            visible = T,
                                            type = 'scatter', 
                                            mode = 'lines+markers',
@@ -500,9 +651,9 @@ for (i in seq(1, ncol(encampments.df.total),1)){
     
   }else{
     
-    plot.camps <- plot.camps %>% add_trace(encampments.df.total,                              #other encampments get generic plotly color
+    plot.camps <- plot.camps %>% add_trace(encampments.df,                              #other encampments get generic plotly color
                                            x = as.Date(encampments.df.dates[,ncol(encampments.df.dates)], format = "%m/%d/%Y"),
-                                           y = encampments.df.total[,i], 
+                                           y = encampments.df[,i], 
                                            visible = T,
                                            type = 'scatter', 
                                            mode = 'lines+markers',
@@ -524,21 +675,19 @@ line <- list(
 lines <- list()
 for (i in seq(1, nrow(abatements),1)) {
   line[["y0"]] <- 0
-  line[["y1"]] <- large.tent
-  line[["x0"]] <- as.Date.character(abatements[i,1], format = "%Y-%m-%d")
-  line[["x1"]] <- as.Date.character(abatements[i,1], format = "%Y-%m-%d")
-  
+  line[["y1"]] <- max(encampments.df[,1:(ncol(encampments.df)-1)], na.rm = T)
+  line[c("x0", "x1")] <- abatements[i,1]
   lines <- c(lines, list(line))
 }
 
-line.height <- as.data.frame(rep(max(encampments.df[,1:(ncol(encampments.df))], na.rm = T), nrow(abatements)))
+line.height <- as.data.frame(rep(max(encampments.df[,1:(ncol(encampments.df)-1)], na.rm = T), nrow(abatements)))
 
 abatements <- cbind(abatements, line.height)
 
 annotations <- list()
 for ( i in seq_len(nrow(abatements))){
   
-  annotation <- list( x = as.Date.character(abatements[i,1], format = "%Y-%m-%d"),
+  annotation <- list( x = abatements[i,1],
                       y = abatements[i,3],
                       text = abatements[i,2],
                       showarrow = T)
@@ -549,8 +698,8 @@ for ( i in seq_len(nrow(abatements))){
 
 
 
-abate.button <- rep(TRUE, ncol(encampments.df.total))
-abate.button[ncol(encampments.df.total)+1] <- FALSE
+abate.button <- rep(TRUE, ncol(encampments.df))
+abate.button[ncol(encampments.df)+1] <- FALSE
 button <- list(list(args = list(list(), list(annotations = NULL, shapes = NULL)), 
                     args2 = list(list(), list(annotations = annotations, shapes = lines)),
                     method = 'update', 
@@ -610,6 +759,20 @@ plot.camps <- plot.camps %>% layout(title = "Encampment Stats",                 
 
 
 plot.camps
+
+####---- Generic Data Processing ----####
+
+#### Read in CSV and geoJSON data into lists ####
+
+temp = list.files(path = "JSON/", pattern = "*.geojson")          #list of all geoJSON files
+
+json = list()                                                    #empy list to fill
+
+for (i in x){
+  thing <- fromJSON(file = paste0("JSON/",temp[[i]]))             #reads in each geoJSON file from temp list
+  json[[i]] <- thing                                             #adds data to geo list
+}
+
 
 #### Loop for creating maps and associated slider steps ####
 
@@ -902,25 +1065,7 @@ app <- Dash$new(external_stylesheets = "https://codepen.io/chriddyp/pen/bWLwgP.c
 
 app$layout(
   htmlDiv(
-    list(
-      pageTitle,
-      pageSubTitle,
-      explanation,
-      map.title,
-      map.exp,
-      graph.map,
-      plot.title,
-      plot.exp,
-      graph.plot,
-      dates.title,
-      dates.exp,
-      graph.3D.dates,
-      camps.title,
-      camps.exp,
       graph.3D.camps
-      )
     )
   )
-app$run_server()
-
-
+app$run_server(host='0.0.0.0', dev_tools_hot_reload=FALSE)
