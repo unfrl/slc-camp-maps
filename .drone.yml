@@ -17,25 +17,6 @@ steps:
         - latest
         - "${DRONE_TAG}"
       cache_from: "unfrl/slc-camp-maps:latest"
-
-  # - name: build and push
-  #   image: docker:20.10-dind
-  #   when:
-  #     ref:
-  #     - refs/tags/*.*.*
-  #   volumes:
-  #   - name: dockersock
-  #     path: /var/run
-  #   environment:
-  #     DOCKER_TOKEN:
-  #       from_secret: docker_token
-  #   commands:
-  #     - sleep 10 # Give Docker a second...
-  #     - echo "$DOCKER_TOKEN" | docker login -u mattunfrl --password-stdin
-  #     - docker build -t unfrl/slc-camp-maps:"${DRONE_TAG}" .
-  #     - docker push unfrl/slc-camp-maps:"${DRONE_TAG}"
-  #     - docker tag unfrl/slc-camp-maps:"${DRONE_TAG}" unfrl/slc-camp-maps:latest
-  #     - docker push unfrl/slc-camp-maps:latest
   
   - name: deploy
     image: sinlead/drone-kubectl
@@ -53,16 +34,3 @@ steps:
     - build and push
     commands:
       - kubectl -n slc-camp-maps set image deployment/slc-camp-maps-deployment slc-camp-maps-app=unfrl/slc-camp-maps:"${DRONE_TAG}" --record
-
-
-# services:
-# - name: docker
-#   image: docker:dind
-#   privileged: true
-#   volumes:
-#   - name: dockersock
-#     path: /var/run
-
-# volumes:
-# - name: dockersock
-#   temp: {}
