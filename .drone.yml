@@ -3,7 +3,7 @@ type: kubernetes
 name: slc-camp-maps
 
 steps:
-  - name: build
+  - name: build and push
     image: docker:20.10-dind
     when:
       ref:
@@ -19,6 +19,24 @@ steps:
       - echo "$DOCKER_TOKEN" | docker login -u mattunfrl --password-stdin
       - docker build -t unfrl/slc-camp-maps:"${DRONE_TAG}" .
       - docker push unfrl/slc-camp-maps:"${DRONE_TAG}"
+  
+  - name: deploy
+    image: sinlead/drone-kubectl
+    settings:
+      kubernetes_server:
+        from_secret: k8s_server
+      kubernetes_cert:
+        from_secret: k8s_cert
+      kubernetes_token:
+        from_secret: k8s_token
+    when:
+      ref:
+      - refs/tags/*.*.*
+    depends_on:
+    - build and push
+    commands:
+      - kubectl -n slc-camp-maps set image deployment/slc-camp-maps-deployment slc-camp-maps-app=unfrl/slc-camp-maps:"${DRONE_TAG}" --record
+
 
 services:
 - name: docker
