@@ -16,7 +16,7 @@ steps:
         from_secret: docker_token
     commands:
       - sleep 10 # Give Docker a second...
-      - echo "$DOCKER_TOKEN" | docker login -u 178256 --password-stdin
+      - echo "$DOCKER_TOKEN" | docker login -u unfrl --password-stdin
       - docker build -t unfrl/slc-camp-maps:"${DRONE_TAG}" .
       - docker push unfrl/slc-camp-maps:"${DRONE_TAG}"
 
