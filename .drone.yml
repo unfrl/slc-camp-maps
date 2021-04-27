@@ -16,6 +16,7 @@ steps:
       tags:
         - latest
         - "${DRONE_TAG}"
+      cache_from: "unfrl/slc-camp-maps:latest"
 
   # - name: build and push
   #   image: docker:20.10-dind
