@@ -17,8 +17,8 @@ steps:
     commands:
       - sleep 10 # Give Docker a second...
       - echo "$DOCKER_TOKEN" | docker login -u 178256 --password-stdin
-      - docker build -t 178256/slc-camp-maps:"${DRONE_TAG}" .
-      - docker push 178256/slc-camp-maps:"${DRONE_TAG}"
+      - docker build -t unfrl/slc-camp-maps:"${DRONE_TAG}" .
+      - docker push unfrl/slc-camp-maps:"${DRONE_TAG}"
 
 services:
 - name: docker
