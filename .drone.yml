@@ -1,0 +1,21 @@
+kind: pipeline
+type: kubernetes
+name: slc-camp-maps
+
+steps:
+  - name: build
+    image: docker:20.10-dind
+    when:
+      ref:
+      - refs/tags/*.*.*
+    volumes:
+    - name: dockersock
+      path: /var/run
+    environment:
+      DOCKER_TOKEN:
+        from_secret: docker_token
+    commands:
+      - sleep 10 # Give Docker a second...
+      - docker login -u 178256 -p ${DOCKER_TOKEN}
+      - docker build -t 178256/slc-camp-maps:${DRONE_TAG}
+      - docker push 178256/slc-camp-maps:${DRONE_TAG}
