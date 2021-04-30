@@ -808,7 +808,7 @@ name, date, and tent count. The tent counts are also visually encoded with a col
 #### Dash ####
 
 pageTitle <- htmlH1(
-  'Mapping SLC Encampments', 
+  'Salt Lake City Homeless Encampments Dataset', 
   style = list(
     textAlign = 'center'
   )
