@@ -525,8 +525,8 @@ lines <- list()
 for (i in seq(1, nrow(abatements),1)) {
   line[["y0"]] <- 0
   line[["y1"]] <- large.tent
-  line[["x0"]] <- as.Date.character(abatements[i,1], format = "%Y-%m-%d")
-  line[["x1"]] <- as.Date.character(abatements[i,1], format = "%Y-%m-%d")
+  line[["x0"]] <- as.Date(abatements[i,1], format = "%m/%d/%Y")
+  line[["x1"]] <- as.Date.character(abatements[i,1], format = "%m/%d/%Y")
   
   lines <- c(lines, list(line))
 }
@@ -538,7 +538,7 @@ abatements <- cbind(abatements, line.height)
 annotations <- list()
 for ( i in seq_len(nrow(abatements))){
   
-  annotation <- list( x = as.Date.character(abatements[i,1], format = "%Y-%m-%d"),
+  annotation <- list( x = as.Date(abatements[i,1], format = "%m/%d/%Y"),
                       y = abatements[i,3],
                       text = abatements[i,2],
                       showarrow = T)
