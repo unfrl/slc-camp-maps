@@ -148,335 +148,6 @@ for ( i in seq(1, nrow(encampments.df.geo),1)){                 #loop through ea
   
 }
 
-#### Dates 3D Map ####
-
-dates.3D <- plot_ly(height = 700)                                          #new plotly object
-
-for ( i in seq(1, nrow(encampments.df.geo),1)){                            #loop through each date 
-  
-  for (j in seq(1, (ncol(encampments.df.geo)),1)){                         #loop through each camp in each date
-    
-    camp <- as.data.frame(eval(parse(text = encampments.df.geo[i,j])))     #place camp/date geometry into a DF object
-    
-    group <- paste(encampments[[j]])                                       #name of camp
-    
-    camp.name <- c(paste0("Camp: ", encampments[[j]], "<br>"))             #hover text name
-    date <- c(paste0("Date: ", alldatelabs[[i]], "<br>"))                 #hover text date 
-    tents <- c(paste0("Tents: ", encampments.df[i,j]))                    #hover text tent count
-    hover <- c(paste0(camp.name, date, tents))                            #concatonate hover text 
-    
-    if (!is.na(encampments.df[i,j])){                                     #for every filled cell
-      
-      colors <- as.data.frame(rep(encampments.df[i,j], nrow(camp)))       #create color from tent count
-      camp <- cbind(camp,colors)                                          #place color for each geometry of camp
-      
-      dates.3D <- dates.3D %>%add_trace(date, x = camp$V1,                
-                                y = camp$V2, 
-                                z = alldates[[i]],                         
-                                type = 'scatter3d',
-                                mode = 'lines', 
-                                scene = 'scene2',
-                                line = list(width = 7,
-                                            color = camp[,4],
-                                            cmin = 2,
-                                            cmax = large.tent,
-                                            colorscale = 'Electric',
-                                            coloraxis = 'coloraxis'),     
-                                showlegend = F,                            #do not show legend (for camp group)
-                                visible = T,                               #make visible
-                                hovertext = hover,                        #sets hover text to created array
-                                hoverinfo = "text",
-                                opacity = .8,                              #80% opacity
-                                name = paste0(group),                     #names the encampment
-                                legendgroup = group)                      #sets legend group
-      
-    } 
-  }
-}
-
-
-steps <- list()                                       #empty steps list
-rep <- rep(FALSE, sum(!is.na(encampments.df.geo)))    #FALSE repeated for each trace
-
-for ( i in seq(1, nrow(encampments.df.geo),1)){                         #for each date
-                                                           #if its the first date
-    
-  step <- list(args = list(list(visible = rep)),                        #turn all to visible = F
-               method = 'update', 
-               label = print(alldatelabs[[i]]))                         #label step by date   
-  
-  camp.leg <- sum(!is.na(encampments.df.geo[0:i,]))                     #number of camps on this date
-  
-  step$args[[1]]$visible[0:camp.leg] <- TRUE                            #turn on traces for camps through this date
-  
-  steps[[i]] = step                                                     #add to steps
-  
-}
-
-xrange <- list(-12461000, -12453000)
-yrange <- list(4974000, 4982000)
-zrange <- list(0, length(alldates))
-
-dates.3D <- dates.3D %>% layout(
-  scene2 = list(
-    camera = list(
-      eye = list(
-        x = 0,
-        y = -1.25,
-        z = .5
-      )
-    ),
-    bgcolor = 'rgb(220,220,220)',
-    aspectmode = 'manual',         #sets aspect ratio
-    aspectratio = list(
-      x= 1,
-      y =.76,
-      z = .1
-    ),
-    xaxis = list(
-      autorange = FALSE,
-      range = xrange,
-      showgrid = FALSE,
-      title = list(
-        text = "East - West"
-      ),
-      showticklabels = FALSE,
-      showbackground = TRUE,
-      backgroundcolor = 'rgb(240,240,240)'
-    ),
-    yaxis = list(
-      autorange = FALSE,
-      range = yrange,
-      showgrid = FALSE,
-      title = list(
-        text = "North- South"
-      ),
-      showticklabels = FALSE,
-      showbackground = TRUE,
-      backgroundcolor = 'rgb(240,240,240)'
-    ),
-    zaxis = list(
-      autorange = FALSE,
-      range = zrange,
-      showgrid = FALSE,
-      title = list(
-        text = "Time"
-      ),
-      type = 'category',
-      categoryorder = "array",
-      categoryarray = alldates,
-      showticklabels = FALSE,
-      showbackground = TRUE,
-      backgroundcolor = 'rgb(240,240,240)'
-    )),
-  legend = list(
-    itemsizeing = "constant",
-    itemwidth = 60,
-    itemclick = "toggleothers",
-    itemdoubleclick = 'toggle',
-    title = list(
-      text = "Camps"
-    ),
-    bgcolor = 'rgb(220,220,220)',
-    bordercolor = 'rgb(0,0,0)',
-    borderwidth = 1
-  ),
-  sliders = list(list(active = length(alldates) - 1,                               #turns sliders on
-                      bgcolor = "#838289",                       #stylize sliders
-                      bordercolor = "#33303f",                   #stylize sliders
-                      activebgcolor = "#292929",                 #stylize sliders
-                      pad = list(                                #stylize sliders
-                        b = 10
-                      ),
-                      currentvalue = list( 
-                        prefix = "Feb 05 - ",
-                        visible = T,                     #call it date and pull label (ie date)
-                        offset = 20,
-                        font = list(
-                          size = 15,
-                          color = "#33303f"
-                        )
-                      ), 
-                      font = list(
-                        color = "#33303f"
-                      ),
-                      steps = steps,                             #use steps data 
-                      transition = list(
-                        duration = 0
-                      ))),
-  coloraxis = list(
-    cmax = large.tent,
-    cmin = 2,
-    colorscale = 'Electric',
-    colorbar = list(
-      xanchor = 'right',
-      x = -0.02,
-      title = list(
-        text = "Tents"
-      ),
-      bgcolor = 'rgb(220,220,220)',
-      bordercolor = 'rgb(0,0,0)',
-      borderwidth = 1
-  )),
-  paper_bgcolor = 'rgb(250,250,250)'
-  ) 
-
-
-dates.3D
-
-
-#### Camps 3D Map ####
-
-camps.3D <- plot_ly(height = 700)                                                   #new plotly object
-
-for ( i in seq(1, nrow(encampments.df.geo),1)){                                     #loop through each date
-   
-  for (j in seq(1, (ncol(encampments.df.geo)),1)){                                  #loop through each camp in each date
-    
-    first.camp <- which(!is.na(encampments.df.geo[,j])) %>%                         #find first date of this camp
-      min(.)
-    
-    group <- paste(encampments[[j]])                                                #name camp
-    
-    camp.name <- c(paste0("Camp: ", encampments[[j]], "<br>"))                       #hover text name
-    date <- c(paste0("Date: ", alldatelabs[[i]], "<br>"))                            #hover text date                 
-    tents <- c(paste0("Tents: ", encampments.df[i,j]))                               #hover text tent count
-    hover <- c(paste0(camp.name, date, tents))                                      #concatonate hover text
-    
-    if (!is.na(encampments.df.geo[i,j])){                                           #only trace for full cells
-      
-    if ( i == first.camp ){                                                         #if this is the first time tracing camp                        
-      
-      camp <- as.data.frame(eval(parse(text = encampments.df.geo[i,j])))            #DF of geometry
-      colors <- as.data.frame(rep(encampments.df[i,j], nrow(camp)))                 #add tent count as new column
-      camp <- cbind(camp,colors)                                                    #bind to DF
-      
-      
-      camps.3D <- camps.3D %>%add_trace(x = camp$V1, 
-                              y = camp$V2, 
-                              z = alldatelabs[[i]],                         
-                              type = 'scatter3d',
-                              mode = 'lines', 
-                              scene = 'scene1',
-                              line = list(width = 7,
-                                          color = camp[,4],
-                                          cmin = 2,
-                                          cmax = large.tent,
-                                          colorscale = 'Electric',
-                                          coloraxis = 'coloraxis'),          
-                              showlegend = T,                      #show legend (for camp group)
-                              visible = T,                         #make visible
-                              hovertext = hover,                  #sets hover text to created array
-                              hoverinfo = "text",
-                              opacity = .8,                       #80% opacity
-                              name = paste0(encampments[[j]]),                           #names it the encampment
-                              legendgroup = group)
-      
-    } else {
-      
-      camp <- as.data.frame(eval(parse(text = encampments.df.geo[i,j])))
-      colors <- as.data.frame(rep(encampments.df[i,j], nrow(camp)))
-      camp <- cbind(camp,colors)
-      
-      camps.3D <- camps.3D %>%add_trace(x = camp$V1, 
-                              y = camp$V2, 
-                              z = alldatelabs[[i]],                         
-                              type = 'scatter3d',
-                              mode = 'lines', 
-                              scene = 'scene1',
-                              line = list(width = 7,
-                                          color = camp[,4],
-                                          cmin = 2,
-                                          cmax = large.tent,
-                                          colorscale = 'Electric',
-                                          coloraxis = 'coloraxis'),              
-                              showlegend = F,                      #show legend (for camp group)
-                              visible = T,                         #make visible
-                              hovertext = hover,                  #sets hover text to created array
-                              hoverinfo = "text",
-                              opacity = .8,                       #80% opacity
-                              name = paste0(encampments[[j]]),                           #names it the encampment
-                              legendgroup = group)
-    }
-    }
-    
-  }
-  
-}
-
-camps.3D <- camps.3D %>% layout(
-  scene1 = list(
-  camera = list(
-    eye = list(
-      x = 0,
-      y = -2.25,
-      z = 1.5
-    )
-  ),
-  bgcolor = 'rgb(220,220,220)',
-  aspectmode = 'data',
-  xaxis = list(
-    autorange = T,
-    showgrid = FALSE,
-    title = list(
-      text = "East - West"
-    ),
-    showticklabels = FALSE,
-    showbackground = TRUE,
-    backgroundcolor = 'rgb(240,240,240)'
-  ),
-  yaxis = list(
-    autorange = T,
-    showgrid = FALSE,
-    title = list(
-      text = "North- South"
-    ),
-    showticklabels = FALSE,
-    showbackground = TRUE,
-    backgroundcolor = 'rgb(240,240,240)'
-  ),
-  zaxis = list(
-    autorange = T,
-    showgrid = FALSE,
-    title = list(
-      text = ""
-    ),
-    type = 'category',
-    categoryorder = "array",
-    categoryarray = alldates,
-    showticklabels = TRUE,
-    showbackground = TRUE,
-    backgroundcolor = 'rgb(240,240,240)'
-  )),
-  legend = list(
-    itemsizeing = "constant",
-    itemwidth = 60,
-    itemclick = "toggle",
-    title = list(
-      text = "Camps"
-    ),
-    bgcolor = 'rgb(220,220,220)',
-    bordercolor = 'rgb(0,0,0)',
-    borderwidth = 1
-  ),
-  coloraxis = list(
-    cmax = large.tent,
-    cmin = 2,
-    colorscale = 'Electric',
-    colorbar = list(
-      xanchor = 'right',
-      x = -0.02,
-      title = list(
-        text = "Tents"
-      ),
-      bgcolor = 'rgb(220,220,220)',
-      bordercolor = 'rgb(0,0,0)',
-      borderwidth = 1
-    )),
-  paper_bgcolor = 'rgb(250,250,250)')
-
-camps.3D
-
 #### Camp Plot ####
 
 abatements <- read.csv("Abatements.csv", stringsAsFactors = F)
@@ -743,7 +414,7 @@ homeless are most likely to be seen as unsightly and in need of removal.
 
 ## The Maps
 
-The maps and statistics presented below attempt to illuminate the geography of homelessness in Salt Lake City through in situ data collection. 
+The map and statistics presented below attempt to illuminate the geography of homelessness in Salt Lake City through in situ data collection. 
 Every three days the city is canvased by car and camps are documented by video. Using these recordings the spatial extent and number 
 of tents present on the streets can be mapped in fine spatial and temporal detail. Camps here are defined as any public 
 space with two or more tents visible from the road. The outlined camps represent the spatial extent between these tents. 
@@ -767,7 +438,7 @@ into these communities.
 In contrast to the images of criminality and danger presented by the city, these encampents are communities of resiliance.
 ***
 "
-map.title_text <- "Encampments Choropleth Map"
+map.title_text <- "Encampments Map"
 
 map.exp_text <- "
 Use this map to investigate how camps move, grow, and adapt overtime. The date slider below the map can be used to
@@ -785,26 +456,6 @@ the recording, the number of tents present, and the name of the encampment. Also
 the upper right. This will reveal when sweeps accured and to which encampments.
 "
 
-dates.title_text <- "City Wide Encampments Time-Cube"
-
-dates.exp_text <- "
- This representation allows you to see how camps have persisted 
-throughout time more clearly. The slider along the bottom of the time-cube allows you to stack camp maps on top of each
-other to percieve their shifts and removals overtime. Each camp is color coded based on the number of tents it contains. Hovering
-over a camp will give you the camp's name, date of mapping, and number of tents present. Unlike the choropleth map, the time-cube allows
-us to better see the sporadic spread of smaller camps shifting around the larger ersistent encampments. 
-"
-
-camps.title_text <- "Individual Encampment Time-Cubes"
-
-camps.exp_text <- "
-This is a time-cube which represents the geographic extent of camps in the x and y dimensions and the time of recordings in the
-z dimension. The older maps are at the bottom of the cube, newer maps at the top. Double-clicking an encampment from the legend on the right
-will provide a detailed view of that camp overtime. These camp specific time-cubes allow us to investigate how an encampment 
-conforms to its available geography, spreading to incorporate new residents, or shrinking after a sweep. Unlike the city wide time-cube,
-these intimate views allow for nuanced analysis of camp specific changes. Again hoving over a specific slice will gie the camp
-name, date, and tent count. The tent counts are also visually encoded with a color scale.
-"
 #### Dash ####
 
 pageTitle <- htmlH1(
@@ -819,16 +470,6 @@ pageSubTitle <- htmlH2(
   style = list(
     textAlign = 'center'
   )
-)
-
-graph.3D.dates <- dccGraph(
-  id = '3D.Dates',
-  figure = dates.3D
-)
-
-graph.3D.camps <- dccGraph(
-  id = '3D.Camps',
-  figure = camps.3D
 )
 
 graph.plot <- dccGraph(
@@ -872,32 +513,6 @@ plot.exp <- htmlDiv(
   )
 )
 
-dates.title <- htmlH3(
-  dates.title_text,
-  style = list(
-    textAlign = 'center'
-  )
-)
-
-dates.exp <- htmlDiv(
-  list(
-    dccMarkdown(children = dates.exp_text)
-  )
-)
-
-camps.title <- htmlH3(
-  camps.title_text,
-  style = list(
-    textAlign = 'center'
-  )
-)
-
-camps.exp <- htmlDiv(
-  list(
-    dccMarkdown(children = camps.exp_text)
-  )
-)
-
 app <- Dash$new(external_stylesheets = "https://codepen.io/chriddyp/pen/bWLwgP.css")
 
 app$layout(
@@ -911,13 +526,7 @@ app$layout(
       graph.map,
       plot.title,
       plot.exp,
-      graph.plot,
-      dates.title,
-      dates.exp,
-      graph.3D.dates,
-      camps.title,
-      camps.exp,
-      graph.3D.camps
+      graph.plot
       )
     )
   )
