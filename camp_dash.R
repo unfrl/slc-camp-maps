@@ -193,13 +193,25 @@ line <- list(
 )
 
 lines <- list()
-for (i in seq(1, nrow(abatements),1)) {
+for (i in seq(1, nrow(abatements),1)){
+  
+  if ((i %% 2) == 0){
   line[["y0"]] <- 0
   line[["y1"]] <- large.tent
   line[["x0"]] <- as.Date(abatements[i,1], format = "%m/%d/%Y")
   line[["x1"]] <- as.Date.character(abatements[i,1], format = "%m/%d/%Y")
   
   lines <- c(lines, list(line))
+  
+  }else{
+    
+  line[["y0"]] <- 0
+  line[["y1"]] <- (large.tent - 20)
+  line[["x0"]] <- as.Date(abatements[i,1], format = "%m/%d/%Y")
+  line[["x1"]] <- as.Date.character(abatements[i,1], format = "%m/%d/%Y")
+    
+  lines <- c(lines, list(line)) 
+  }
 }
 
 line.height <- as.data.frame(rep(max(encampments.df[,1:(ncol(encampments.df))], na.rm = T), nrow(abatements)))
