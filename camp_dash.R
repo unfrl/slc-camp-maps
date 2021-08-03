@@ -216,6 +216,18 @@ for (i in seq(1, nrow(abatements),1)){
 
 line.height <- as.data.frame(rep(max(encampments.df[,1:(ncol(encampments.df))], na.rm = T), nrow(abatements)))
 
+for (i in seq(1, nrow(line.height), 1)){
+  
+  if ((i %% 2) == 0){
+    
+    line.height[i, 1] = (line.height[i, 1] + 3)
+    
+  }else{
+    
+    line.height[i, 1] = ((large.tent - 20) + 3)
+  }
+}
+
 abatements <- cbind(abatements, line.height)
 
 annotations <- list()
