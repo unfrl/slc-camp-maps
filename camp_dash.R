@@ -224,7 +224,7 @@ for ( i in seq_len(nrow(abatements))){
   annotation <- list( x = as.Date(abatements[i,1], format = "%m/%d/%Y"),
                       y = abatements[i,3],
                       text = abatements[i,2],
-                      showarrow = T)
+                      showarrow = F)
   
   annotations[[i]] <- annotation
   
